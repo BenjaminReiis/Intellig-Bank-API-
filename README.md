@@ -1,5 +1,7 @@
 # 🏦 Bank API
 
+https://benjaminreiis.github.io/Intellig-Bank-API-/
+
 Uma API RESTful de um sistema bancário desenvolvida com **FastAPI**, simulando as principais funcionalidades de um banco digital moderno.
 
 Este projeto foi criado com foco em boas práticas de desenvolvimento Backend, organização de código e arquitetura escalável, sendo ideal para portfólio e estudos.
