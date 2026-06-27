@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bank API — Sistema Bancário Digital</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0A0C12;
+    --bg-raised: #10131C;
+    --bg-panel: #141823;
+    --ink: #E8E6E0;
+    --ink-dim: #8C93A6;
+    --line: #232938;
+    --credit: #16C784;
+    --debit: #FF5C5C;
+    --action: #3D7FFF;
+    --credit-dim: rgba(22,199,132,0.14);
+    --debit-dim: rgba(255,92,92,0.14);
+    --action-dim: rgba(61,127,255,0.14);
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'IBM Plex Sans', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  *{margin:0; padding:0; box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    line-height:1.6;
+    overflow-x:hidden;
+  }
+  body::before{
+    content:'';
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 60px 60px;
+    opacity:0.2;
+    pointer-events:none;
+    z-index:0;
+  }
+
+  .wrap{max-width:1080px; margin:0 auto; padding:0 32px; position:relative; z-index:1;}
+  a{color:var(--action); text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  ::selection{background:var(--credit); color:#0A0C12;}
+
+  code{
+    font-family:var(--font-mono);
+    background:var(--bg-raised);
+    padding:2px 6px;
+    border-radius:4px;
+    font-size:0.85em;
+    border:1px solid var(--line);
+  }
+
+  /* ===== NAV ===== */
+  nav{
+    position:sticky; top:0; z-index:50;
+    backdrop-filter: blur(10px);
+    background: rgba(10,12,18,0.8);
+    border-bottom:1px solid var(--line);
+  }
+  nav .wrap{ display:flex; align-items:center; justify-content:space-between; height:64px; }
+  .nav-brand{
+    font-family:var(--font-display);
+    font-weight:700; font-size:1.05rem;
+    display:flex; align-items:center; gap:10px;
+  }
+  .nav-brand .lock{
+    width:16px; height:16px;
+    display:inline-flex; align-items:center; justify-content:center;
+    color:var(--credit);
+  }
+  .nav-links{ display:flex; gap:26px; font-size:0.86rem; color:var(--ink-dim); }
+  .nav-links a{ color:var(--ink-dim); font-weight:500; }
+  .nav-links a:hover{ color:var(--ink); text-decoration:none; }
+  @media (max-width:760px){ .nav-links{display:none;} }
+
+  /* ===== HERO ===== */
+  .hero{ padding:96px 0 64px; }
+  .hero-grid{ display:grid; grid-template-columns: 1.05fr 1fr; gap:48px; align-items:center; }
+  @media (max-width:880px){ .hero-grid{ grid-template-columns:1fr; } }
+
+  .eyebrow{
+    font-family:var(--font-mono);
+    font-size:0.78rem;
+    color:var(--credit);
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    display:flex; align-items:center; gap:8px;
+    margin-bottom:20px;
+  }
+  .eyebrow::before{ content:''; width:7px; height:7px; background:var(--credit); border-radius:50%; box-shadow:0 0 10px var(--credit); }
+
+  h1{
+    font-family:var(--font-display);
+    font-size: clamp(2.1rem, 4.4vw, 3.3rem);
+    font-weight:700;
+    letter-spacing:-0.02em;
+    line-height:1.08;
+    margin-bottom:20px;
+  }
+  h1 .accent{ color:var(--credit); }
+
+  .hero p.lead{ color:var(--ink-dim); font-size:1.05rem; max-width:520px; margin-bottom:28px; }
+
+  .hero-actions{ display:flex; gap:14px; flex-wrap:wrap; }
+  .btn{
+    font-family:var(--font-mono);
+    font-size:0.85rem;
+    padding:11px 20px;
+    border-radius:6px;
+    border:1px solid var(--line);
+    display:inline-flex; align-items:center; gap:8px;
+    transition:all 0.2s ease;
+    cursor:pointer;
+  }
+  .btn-primary{ background:var(--credit); color:#0A0C12; border-color:var(--credit); font-weight:600; }
+  .btn-primary:hover{ background:#3DE0A0; text-decoration:none; }
+  .btn-ghost{ color:var(--ink); }
+  .btn-ghost:hover{ border-color:var(--ink-dim); text-decoration:none; }
+
+  /* ===== LEDGER WIDGET (signature element) ===== */
+  .ledger-card{
+    border:1px solid var(--line);
+    border-radius:14px;
+    background: var(--bg-panel);
+    overflow:hidden;
+  }
+  .ledger-head{
+    padding:20px 22px;
+    border-bottom:1px solid var(--line);
+    display:flex; justify-content:space-between; align-items:flex-start;
+  }
+  .ledger-head .acc-label{ font-family:var(--font-mono); font-size:0.72rem; color:var(--ink-dim); margin-bottom:6px; }
+  .ledger-head .acc-number{ font-family:var(--font-mono); font-size:0.82rem; color:var(--ink-dim); }
+  .ledger-balance{ text-align:right; }
+  .ledger-balance .bal-label{ font-family:var(--font-mono); font-size:0.7rem; color:var(--ink-dim); margin-bottom:4px; }
+  .ledger-balance .bal-value{
+    font-family:var(--font-mono);
+    font-size:1.6rem;
+    font-weight:600;
+    color:var(--credit);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ledger-feed{
+    padding:8px 0;
+    min-height: 268px;
+    display:flex;
+    flex-direction:column-reverse;
+    overflow:hidden;
+  }
+  .ledger-row{
+    display:grid;
+    grid-template-columns: 1fr auto;
+    gap:12px;
+    padding:11px 22px;
+    font-family:var(--font-mono);
+    font-size:0.82rem;
+    border-bottom:1px solid var(--line);
+    opacity:0;
+    transform: translateY(6px);
+    animation: rowIn 0.4s ease forwards;
+  }
+  @keyframes rowIn{ to{ opacity:1; transform:translateY(0); } }
+  .ledger-row .desc{ color:var(--ink); }
+  .ledger-row .desc .type-tag{
+    font-size:0.68rem;
+    color:var(--ink-dim);
+    display:block;
+    margin-top:2px;
+  }
+  .ledger-row .amt{ text-align:right; font-weight:600; font-variant-numeric: tabular-nums; }
+  .amt-credit{ color:var(--credit); }
+  .amt-debit{ color:var(--debit); }
+
+  .ledger-foot{
+    padding:13px 22px;
+    border-top:1px solid var(--line);
+    font-family:var(--font-mono);
+    font-size:0.72rem;
+    color:var(--ink-dim);
+    display:flex; justify-content:space-between;
+    align-items:center;
+  }
+  .ledger-foot .live-dot{ display:flex; align-items:center; gap:6px; color:var(--credit); }
+  .ledger-foot .live-dot span{ width:6px; height:6px; border-radius:50%; background:var(--credit); animation:blink 1.8s ease-in-out infinite; }
+  @keyframes blink{ 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+  /* ===== SECTIONS ===== */
+  section{ padding:88px 0; border-top:1px solid var(--line); }
+  .sec-head{ margin-bottom:48px; max-width:640px; }
+  .sec-num{ font-family:var(--font-mono); font-size:0.78rem; color:var(--ink-dim); margin-bottom:10px; display:block; }
+  h2{
+    font-family:var(--font-display);
+    font-size: clamp(1.5rem, 3vw, 2.1rem);
+    font-weight:600;
+    letter-spacing:-0.01em;
+    margin-bottom:14px;
+  }
+  .sec-head p{ color:var(--ink-dim); }
+
+  /* ===== FEATURE GROUPS ===== */
+  .feature-groups{ display:grid; grid-template-columns: repeat(3,1fr); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+  @media (max-width:860px){ .feature-groups{ grid-template-columns:1fr; } }
+  .fg-card{ background:var(--bg-panel); padding:28px 26px; }
+  .fg-card .fg-icon{
+    width:36px; height:36px;
+    border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    margin-bottom:18px;
+    font-size:1rem;
+  }
+  .fg-icon-auth{ background:var(--action-dim); color:var(--action); }
+  .fg-icon-acc{ background:var(--credit-dim); color:var(--credit); }
+  .fg-icon-ops{ background:var(--debit-dim); color:var(--debit); }
+  .fg-card h3{ font-family:var(--font-display); font-size:1.05rem; margin-bottom:14px; }
+  .fg-card ul{ list-style:none; display:flex; flex-direction:column; gap:9px; }
+  .fg-card li{ font-size:0.87rem; color:var(--ink-dim); display:flex; align-items:flex-start; gap:8px; }
+  .fg-card li::before{ content:'·'; color:var(--ink-dim); }
+
+  /* ===== ARCH / ENDPOINT FLOW ===== */
+  .flow-block{
+    border:1px solid var(--line);
+    border-radius:14px;
+    background:var(--bg-panel);
+    overflow:hidden;
+  }
+  .flow-row{ display:grid; grid-template-columns:repeat(4,1fr); }
+  @media (max-width:880px){ .flow-row{ grid-template-columns:1fr 1fr; } }
+  @media (max-width:520px){ .flow-row{ grid-template-columns:1fr; } }
+  .flow-cell{
+    padding:24px 20px;
+    border-right:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+  }
+  .flow-cell:last-child{ border-right:none; }
+  .flow-cell .step-num{ font-family:var(--font-mono); font-size:0.7rem; color:var(--ink-dim); display:block; margin-bottom:8px; }
+  .flow-cell h4{ font-family:var(--font-display); font-size:0.92rem; margin-bottom:6px; }
+  .flow-cell p{ font-size:0.82rem; color:var(--ink-dim); }
+  .flow-footer{ padding:14px 20px; font-family:var(--font-mono); font-size:0.76rem; color:var(--ink-dim); text-align:center; }
+  .flow-footer strong{ color:var(--action); }
+
+  /* ===== TREE ===== */
+  .tree-block{
+    background:var(--bg-panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:28px 30px;
+    font-family:var(--font-mono);
+    font-size:0.84rem;
+    color:var(--ink-dim);
+    overflow-x:auto;
+  }
+  .tree-block .folder{ color:var(--credit); }
+  .tree-block .file{ color:var(--ink); }
+  .tree-block .comment{ color:var(--ink-dim); opacity:0.7; }
+  .tree-block .line{ white-space:pre; }
+
+  /* ===== STACK ===== */
+  .stack-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+  @media (max-width:860px){ .stack-grid{ grid-template-columns:1fr; } }
+  .stack-card{ background:var(--bg-panel); padding:26px 24px; }
+  .stack-card .tag{ font-family:var(--font-mono); font-size:0.72rem; letter-spacing:0.05em; text-transform:uppercase; padding:4px 9px; border-radius:4px; display:inline-block; margin-bottom:16px; }
+  .stack-card ul{ list-style:none; display:flex; flex-direction:column; gap:9px; }
+  .stack-card li{ font-family:var(--font-mono); font-size:0.85rem; color:var(--ink); display:flex; align-items:center; gap:9px; }
+  .stack-card li::before{ content:''; width:5px; height:5px; border-radius:50%; background:var(--ink-dim); flex-shrink:0; }
+
+  /* ===== CODE BLOCK ===== */
+  .code-block{ background:#0D0F16; border:1px solid var(--line); border-radius:12px; overflow:hidden; margin:28px 0; }
+  .code-head{ display:flex; align-items:center; gap:8px; padding:11px 16px; border-bottom:1px solid var(--line); font-family:var(--font-mono); font-size:0.75rem; color:var(--ink-dim); }
+  .code-head .dots{ display:flex; gap:5px; margin-right:6px; }
+  .code-head .dots span{ width:8px; height:8px; border-radius:50%; background:var(--line); }
+  pre{ padding:20px 22px; overflow-x:auto; font-family:var(--font-mono); font-size:0.82rem; line-height:1.65; color:#C7CCDA; }
+  pre .kw{ color:var(--action); }
+  pre .str{ color:var(--credit); }
+  pre .com{ color:var(--ink-dim); }
+  pre .fn{ color:#7FE8AA; }
+  pre .typ{ color:var(--debit); }
+
+  /* ===== ENDPOINTS TABLE ===== */
+  .endpoint-table{ width:100%; border-collapse:collapse; font-family:var(--font-mono); font-size:0.84rem; }
+  .endpoint-table th, .endpoint-table td{ text-align:left; padding:12px 10px; border-bottom:1px solid var(--line); }
+  .endpoint-table th{ color:var(--ink-dim); text-transform:uppercase; font-size:0.68rem; letter-spacing:0.05em; }
+  .endpoint-table tr:last-child td{ border-bottom:none; }
+  .method{ font-weight:600; padding:2px 8px; border-radius:4px; font-size:0.74rem; display:inline-block; min-width:50px; text-align:center; }
+  .m-get{ background:var(--action-dim); color:var(--action); }
+  .m-post{ background:var(--credit-dim); color:var(--credit); }
+  .endpoint-table td.path{ color:var(--ink); }
+  .endpoint-table td.desc{ color:var(--ink-dim); }
+
+  /* ===== ROADMAP ===== */
+  .road-list{ display:flex; flex-direction:column; }
+  .road-item{ display:grid; grid-template-columns:28px 1fr; gap:16px; padding:16px 0; border-bottom:1px solid var(--line); align-items:flex-start; }
+  .road-item:first-child{ padding-top:0; }
+  .road-item:last-child{ border-bottom:none; }
+  .road-check{
+    width:20px; height:20px; border-radius:5px;
+    background:var(--action-dim); color:var(--action);
+    display:flex; align-items:center; justify-content:center;
+    font-size:0.68rem; font-family:var(--font-mono);
+    margin-top:2px;
+  }
+  .road-item p{ font-size:0.92rem; color:var(--ink); }
+
+  /* ===== AUTHOR ===== */
+  .author-card{
+    display:flex; align-items:center; gap:20px;
+    border:1px solid var(--line);
+    border-radius:14px;
+    background:var(--bg-panel);
+    padding:26px 28px;
+  }
+  .author-avatar{
+    width:54px; height:54px;
+    border-radius:50%;
+    background: linear-gradient(135deg, var(--action), var(--credit));
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:1.2rem;
+    color:#0A0C12;
+    flex-shrink:0;
+  }
+  .author-card h4{ font-family:var(--font-display); font-size:1.05rem; margin-bottom:6px; }
+  .author-tags{ display:flex; gap:8px; flex-wrap:wrap; }
+  .author-tags span{
+    font-family:var(--font-mono);
+    font-size:0.72rem;
+    color:var(--ink-dim);
+    background:var(--bg-raised);
+    border:1px solid var(--line);
+    padding:3px 9px;
+    border-radius:4px;
+  }
+
+  footer{ padding:48px 0 64px; border-top:1px solid var(--line); text-align:center; }
+  footer p{ color:var(--ink-dim); font-size:0.85rem; font-family:var(--font-mono); }
+  footer .footer-dots{ display:flex; gap:6px; justify-content:center; margin-bottom:18px; }
+  footer .footer-dots span{ width:6px; height:6px; border-radius:50%; }
+  footer .footer-dots span:nth-child(1){ background:var(--action); }
+  footer .footer-dots span:nth-child(2){ background:var(--credit); }
+  footer .footer-dots span:nth-child(3){ background:var(--debit); }
+
+  @media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } }
+  a:focus-visible, button:focus-visible{ outline:2px solid var(--action); outline-offset:2px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="nav-brand">
+      <svg class="lock" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="9" rx="1.5" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="currentColor" stroke-width="1.8"/></svg>
+      Bank API
+    </div>
+    <div class="nav-links">
+      <a href="#funcionalidades">Funcionalidades</a>
+      <a href="#fluxo">Autenticação</a>
+      <a href="#estrutura">Estrutura</a>
+      <a href="#stack">Stack</a>
+      <a href="#endpoints">Endpoints</a>
+      <a href="#roadmap">Roadmap</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow">api restful · fastapi · python</span>
+      <h1>Um banco digital,<br>em <span class="accent">endpoints.</span></h1>
+      <p class="lead">
+        API RESTful de um sistema bancário construída com FastAPI — autenticação JWT,
+        contas, depósitos, saques, transferências e extrato. Arquitetura em camadas,
+        pensada para escalar do SQLite em desenvolvimento ao PostgreSQL em produção.
+      </p>
+      <div class="hero-actions">
+        <a href="#funcionalidades" class="btn btn-primary">Ver funcionalidades ↓</a>
+        <a href="#endpoints" class="btn btn-ghost">Ver endpoints →</a>
+      </div>
+    </div>
+
+    <div class="ledger-card">
+      <div class="ledger-head">
+        <div>
+          <div class="acc-label">CONTA CORRENTE</div>
+          <div class="acc-number">ag 0001 · cc 00219-4</div>
+        </div>
+        <div class="ledger-balance">
+          <div class="bal-label">SALDO ATUAL</div>
+          <div class="bal-value" id="balanceValue">R$ 0,00</div>
+        </div>
+      </div>
+      <div class="ledger-feed" id="ledgerFeed"></div>
+      <div class="ledger-foot">
+        <span class="live-dot"><span></span>extrato em tempo real</span>
+        <span>GET /accounts/{id}/statement</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="funcionalidades">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">01 · funcionalidades</span>
+      <h2>O que a API expõe</h2>
+      <p>Três domínios bem separados: identidade, conta e movimentação financeira.</p>
+    </div>
+
+    <div class="feature-groups">
+      <div class="fg-card">
+        <div class="fg-icon fg-icon-auth">🔐</div>
+        <h3>Autenticação</h3>
+        <ul>
+          <li>Cadastro de usuários</li>
+          <li>Login com JWT</li>
+          <li>Senhas com hash Bcrypt</li>
+          <li>Rotas protegidas por Bearer Token</li>
+        </ul>
+      </div>
+      <div class="fg-card">
+        <div class="fg-icon fg-icon-acc">🏦</div>
+        <h3>Contas bancárias</h3>
+        <ul>
+          <li>Criação de conta</li>
+          <li>Consulta de saldo</li>
+          <li>Consulta de dados da conta</li>
+        </ul>
+      </div>
+      <div class="fg-card">
+        <div class="fg-icon fg-icon-ops">💰</div>
+        <h3>Operações financeiras</h3>
+        <ul>
+          <li>Depósito</li>
+          <li>Saque</li>
+          <li>Transferência entre contas</li>
+          <li>Histórico de transações</li>
+          <li>Extrato bancário</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="fluxo">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">02 · segurança</span>
+      <h2>Do login ao acesso autorizado</h2>
+      <p>Toda rota sensível exige um token válido — sem exceções.</p>
+    </div>
+
+    <div class="flow-block">
+      <div class="flow-row">
+        <div class="flow-cell">
+          <span class="step-num">passo 1</span>
+          <h4>Cadastro</h4>
+          <p>Senha é convertida em hash com Bcrypt antes de ser persistida.</p>
+        </div>
+        <div class="flow-cell">
+          <span class="step-num">passo 2</span>
+          <h4>Login</h4>
+          <p>Credenciais validadas contra o hash armazenado.</p>
+        </div>
+        <div class="flow-cell">
+          <span class="step-num">passo 3</span>
+          <h4>Emissão do JWT</h4>
+          <p>Token assinado é devolvido ao cliente com tempo de expiração.</p>
+        </div>
+        <div class="flow-cell">
+          <span class="step-num">passo 4</span>
+          <h4>Bearer Token</h4>
+          <p>Toda requisição subsequente envia o token no header Authorization.</p>
+        </div>
+      </div>
+      <div class="flow-footer">
+        <span><strong>Authorization: Bearer &lt;token&gt;</strong> — exigido em todas as rotas de conta e operações</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="estrutura">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">03 · projeto</span>
+      <h2>Estrutura de pastas</h2>
+      <p>Camadas separadas por responsabilidade: modelos, schemas, rotas e regras de negócio.</p>
+    </div>
+
+    <div class="tree-block">
+<div class="line"><span class="folder">bank-api/</span></div>
+<div class="line">│</div>
+<div class="line">├── <span class="folder">app/</span></div>
+<div class="line">│   ├── <span class="folder">core/</span>          <span class="comment"># configurações, segurança, JWT</span></div>
+<div class="line">│   ├── <span class="folder">models/</span>        <span class="comment"># modelos SQLAlchemy</span></div>
+<div class="line">│   ├── <span class="folder">routers/</span>       <span class="comment"># rotas FastAPI</span></div>
+<div class="line">│   ├── <span class="folder">schemas/</span>       <span class="comment"># schemas Pydantic</span></div>
+<div class="line">│   ├── <span class="folder">services/</span>      <span class="comment"># regras de negócio</span></div>
+<div class="line">│   ├── <span class="folder">utils/</span></div>
+<div class="line">│   ├── <span class="file">__init__.py</span></div>
+<div class="line">│   └── <span class="file">database.py</span></div>
+<div class="line">│</div>
+<div class="line">├── <span class="folder">tests/</span></div>
+<div class="line">│</div>
+<div class="line">├── <span class="file">.env</span></div>
+<div class="line">├── <span class="file">.gitignore</span></div>
+<div class="line">├── <span class="file">README.md</span></div>
+<div class="line">├── <span class="file">requirements.txt</span></div>
+<div class="line">└── <span class="file">main.py</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="stack">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">04 · tecnologias</span>
+      <h2>Stack completa</h2>
+      <p>De desenvolvimento local a produção, sem trocar de framework.</p>
+    </div>
+
+    <div class="stack-grid">
+      <div class="stack-card">
+        <span class="tag" style="background:var(--action-dim); color:var(--action);">Core</span>
+        <ul>
+          <li>Python 3</li>
+          <li>FastAPI</li>
+          <li>Uvicorn</li>
+          <li>Pydantic v2</li>
+        </ul>
+      </div>
+      <div class="stack-card">
+        <span class="tag" style="background:var(--credit-dim); color:var(--credit);">Dados &amp; Segurança</span>
+        <ul>
+          <li>SQLAlchemy 2.0</li>
+          <li>Alembic</li>
+          <li>JWT</li>
+          <li>Passlib (Bcrypt)</li>
+        </ul>
+      </div>
+      <div class="stack-card">
+        <span class="tag" style="background:var(--debit-dim); color:var(--debit);">Banco &amp; Infra</span>
+        <ul>
+          <li>SQLite (desenvolvimento)</li>
+          <li>PostgreSQL (produção)</li>
+          <li>Docker</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="endpoints">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">05 · api</span>
+      <h2>Principais rotas</h2>
+      <p>Documentação interativa disponível automaticamente via Swagger e ReDoc.</p>
+    </div>
+
+    <table class="endpoint-table">
+      <thead><tr><th>Método</th><th>Rota</th><th>Descrição</th></tr></thead>
+      <tbody>
+        <tr><td><span class="method m-post">POST</span></td><td class="path">/auth/register</td><td class="desc">Cadastra um novo usuário</td></tr>
+        <tr><td><span class="method m-post">POST</span></td><td class="path">/auth/login</td><td class="desc">Autentica e retorna o token JWT</td></tr>
+        <tr><td><span class="method m-post">POST</span></td><td class="path">/accounts</td><td class="desc">Cria uma nova conta bancária</td></tr>
+        <tr><td><span class="method m-get">GET</span></td><td class="path">/accounts/{id}/balance</td><td class="desc">Consulta o saldo atual</td></tr>
+        <tr><td><span class="method m-post">POST</span></td><td class="path">/transactions/deposit</td><td class="desc">Realiza um depósito</td></tr>
+        <tr><td><span class="method m-post">POST</span></td><td class="path">/transactions/withdraw</td><td class="desc">Realiza um saque</td></tr>
+        <tr><td><span class="method m-post">POST</span></td><td class="path">/transactions/transfer</td><td class="desc">Transfere valores entre contas</td></tr>
+        <tr><td><span class="method m-get">GET</span></td><td class="path">/accounts/{id}/statement</td><td class="desc">Retorna o extrato bancário</td></tr>
+      </tbody>
+    </table>
+
+    <div class="code-block">
+      <div class="code-head"><span class="dots"><span></span><span></span><span></span></span> terminal</div>
+      <pre><span class="com"># clone o repositório</span>
+git clone https://github.com/SEU-USUARIO/bank-api.git
+cd bank-api
+
+<span class="com"># crie e ative o ambiente virtual</span>
+python3 -m venv venv
+<span class="kw">source</span> venv/bin/activate
+
+<span class="com"># instale as dependências</span>
+pip install -r requirements.txt
+
+<span class="com"># execute a aplicação</span>
+uvicorn main:app --reload
+
+<span class="com"># documentação interativa</span>
+<span class="com"># Swagger UI → http://127.0.0.1:8000/docs</span>
+<span class="com"># ReDoc      → http://127.0.0.1:8000/redoc</span></pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-head"><span class="dots"><span></span><span></span><span></span></span> app/routers/transactions.py</div>
+      <pre><span class="kw">@router</span>.post(<span class="str">"/transfer"</span>, response_model=TransactionOut)
+<span class="kw">def</span> <span class="fn">transfer</span>(
+    payload: TransferRequest,
+    current_user: <span class="typ">User</span> = Depends(get_current_user),
+    db: <span class="typ">Session</span> = Depends(get_db),
+):
+    <span class="fn">validate_balance</span>(payload.origin_account_id, payload.amount, db)
+    transaction = <span class="fn">execute_transfer</span>(
+        db=db,
+        origin_id=payload.origin_account_id,
+        destination_id=payload.destination_account_id,
+        amount=payload.amount,
+    )
+    <span class="kw">return</span> transaction</pre>
+    </div>
+  </div>
+</section>
+
+<section id="roadmap">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">06 · roadmap</span>
+      <h2>Funcionalidades planejadas</h2>
+      <p>Próximos passos para aproximar o projeto de um ambiente de produção real.</p>
+    </div>
+
+    <div class="road-list">
+      <div class="road-item"><span class="road-check">→</span><p>Transferência entre contas</p></div>
+      <div class="road-item"><span class="road-check">→</span><p>Extrato completo com filtros por período</p></div>
+      <div class="road-item"><span class="road-check">→</span><p>Containerização com Docker</p></div>
+      <div class="road-item"><span class="road-check">→</span><p>Migração para PostgreSQL em produção</p></div>
+      <div class="road-item"><span class="road-check">→</span><p>Versionamento de schema com Alembic</p></div>
+      <div class="road-item"><span class="road-check">→</span><p>Testes automatizados (pytest)</p></div>
+      <div class="road-item"><span class="road-check">→</span><p>Deploy no Render</p></div>
+      <div class="road-item"><span class="road-check">→</span><p>Pipeline de CI/CD com GitHub Actions</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="autor">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">07 · autor</span>
+      <h2>Sobre o desenvolvedor</h2>
+    </div>
+    <div class="author-card">
+      <div class="author-avatar">BR</div>
+      <div>
+        <h4>Benjamin Reis</h4>
+        <div class="author-tags">
+          <span>Backend Developer</span>
+          <span>Python</span>
+          <span>FastAPI</span>
+          <span>Java</span>
+          <span>SQL</span>
+          <span>APIs REST</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-dots"><span></span><span></span><span></span></div>
+    <p>Bank API · FastAPI · SQLAlchemy · JWT · Docker</p>
+  </div>
+</footer>
+
+<script>
+  // Live ledger feed — signature element: balance counts up/down as entries stream in
+  const feed = document.getElementById('ledgerFeed');
+  const balanceEl = document.getElementById('balanceValue');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const entries = [
+    { type:'credit', label:'Depósito recebido', amount: 1250.00 },
+    { type:'debit',  label:'Saque em caixa eletrônico', amount: -180.00 },
+    { type:'debit',  label:'Transferência enviada · cc 00874-1', amount: -320.50 },
+    { type:'credit', label:'Transferência recebida · cc 00112-9', amount: 540.00 },
+    { type:'debit',  label:'Pagamento de boleto', amount: -97.30 },
+    { type:'credit', label:'Depósito recebido', amount: 800.00 },
+    { type:'debit',  label:'Saque em caixa eletrônico', amount: -60.00 },
+    { type:'credit', label:'Transferência recebida · cc 00231-7', amount: 412.90 },
+  ];
+
+  function formatBRL(value){
+    const sign = value < 0 ? '-' : '';
+    const abs = Math.abs(value);
+    return sign + 'R$ ' + abs.toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 });
+  }
+
+  let balance = 0;
+  let i = 0;
+  const MAX_ROWS = 6;
+
+  function addRow(entry){
+    const row = document.createElement('div');
+    row.className = 'ledger-row';
+    const isCredit = entry.type === 'credit';
+    row.innerHTML = `
+      <div class="desc">${entry.label}<span class="type-tag">${isCredit ? 'crédito' : 'débito'}</span></div>
+      <div class="amt ${isCredit ? 'amt-credit' : 'amt-debit'}">${isCredit ? '+' : ''}${formatBRL(entry.amount)}</div>
+    `;
+    feed.insertBefore(row, feed.firstChild);
+    while(feed.children.length > MAX_ROWS){
+      feed.removeChild(feed.lastChild);
+    }
+  }
+
+  function animateBalance(from, to, duration){
+    if(reduceMotion){ balanceEl.textContent = formatBRL(to); return; }
+    const start = performance.now();
+    function step(now){
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1-t, 3);
+      const current = from + (to - from) * eased;
+      balanceEl.textContent = formatBRL(current);
+      if(t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  function tick(){
+    const entry = entries[i % entries.length];
+    i++;
+    addRow(entry);
+    const newBalance = balance + entry.amount;
+    animateBalance(balance, newBalance, 700);
+    balance = newBalance;
+  }
+
+  // seed initial state
+  balance = 3200.00;
+  balanceEl.textContent = formatBRL(balance);
+  for(let k=0; k<4; k++){
+    const entry = entries[k];
+    addRow(entry);
+  }
+
+  if(!reduceMotion){
+    setInterval(tick, 2400);
+  } else {
+    entries.slice(4).forEach(e => addRow(e));
+  }
+</script>
+
+</body>
+</html>
